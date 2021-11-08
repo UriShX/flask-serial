@@ -11,10 +11,10 @@ xx
 - install:
 
     `python setup.py install`
-    
+
 # pip install
 
-`pip install flask-serial`  
+`pip install flask-serial`
 
 # Usage
 
@@ -46,16 +46,16 @@ def handle_message(msg):
     # send a msg of bytes
     ser.on_send(b'send a bytes message!!!')
 
-@ser.on_log()
+@ser.log()
 def handle_logging(level, info):
     print(level, info)
 
 if __name__ == '__main__':
     app.run()
-    
+
 ```
 
-# Use With Socketio 
+# Use With Socketio
 
 ```python
 
@@ -96,7 +96,7 @@ def handle_message(msg):
     print("receive a message:", msg)
     socketio.emit("serial_message", data={"message":str(msg)})
 
-@ser.on_log()
+@ser.log()
 def handle_logging(level, info):
     print(level, info)
 
@@ -105,7 +105,6 @@ if __name__ == '__main__':
     # this must use `debug=False`
     # if you use `debug=True`,it will open serial twice, it will open serial failed!!!
     socketio.run(app, debug=False)
-    
-    
-```
 
+
+```

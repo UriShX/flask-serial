@@ -25,6 +25,7 @@ SERIAL_LOG_DEBUG = 0x6
 
 class Ser:
     """serial class,use thire library: pyserial"""
+
     def __init__(self):
         # default serial args
         self.serial = serial.Serial()
@@ -44,16 +45,18 @@ class Ser:
 
         self._on_message = None
         self._on_send = None
-        self._on_log = None
+        self._log = None
         self._logger = None
         # callback mutex RLock
         self._callback_mutex = threading.RLock()
         self._open_mutex = threading.Lock()
 
+
     def loop_start(self):
         self._thread = threading.Thread(target=self.loop_forever)
         self._thread.setDaemon(True)
         self._thread.start()
+
 
     def loop_forever(self):
         run = True
@@ -75,6 +78,7 @@ class Ser:
                     self._easy_log(SERIAL_LOG_INFO, "serial receive message:%s", b)
                 except Exception as e:
                     pass
+
 
     def _open_serial(self):
         """try to open the serial"""
@@ -98,6 +102,7 @@ class Ser:
             print("[ERR] port is not setting!!!")
             self._easy_log(SERIAL_LOG_ERR, "port is not setting!!!")
 
+
     def _close_serial(self):
         try:
             self.serial.close()
@@ -105,6 +110,7 @@ class Ser:
             self._thread_terminate = False
         except:
             pass
+
 
     def _recv(self):
         """serial recv thread"""
@@ -123,6 +129,7 @@ class Ser:
                     # self.serial_alive = False
                     # self._easy_log(SERIAL_LOG_ERR, "serial err:%s", e)
 
+
     @property
     def on_message(self):
         """ If implemented, called when the serial has receive message.
@@ -131,16 +138,19 @@ class Ser:
         """
         return self._on_message
 
+
     @on_message.setter
     def on_message(self, func):
         with self._callback_mutex:
             self._on_message = func
 
+
     def _handle_on_message(self, message):
         """serial receive message handle"""
         self.on_message(message)
 
-    def on_send(self, msg):
+
+    def send(self, msg):
         """send msg,
         msg: type of bytes or str"""
         with self._callback_mutex:
@@ -151,14 +161,16 @@ class Ser:
                     self.serial.write(msg.encode('utf-8'))
             self._easy_log(SERIAL_LOG_INFO, "serial send message: %s", msg)
 
+
     @property
-    def on_log(self):
+    def log(self):
         """If implemented, called when the serial has log information.
         Defined to allow debugging."""
-        return self._on_log
+        return self._log
 
-    @on_log.setter
-    def on_log(self, func):
+
+    @log.setter
+    def log(self, func):
         """ Define the logging callback implementation.
 
         Expected signature is:
@@ -169,10 +181,11 @@ class Ser:
                     SERIAL_LOG_ERR, and SERIAL_LOG_DEBUG.
         buf:        the message itself
         """
-        self._on_log = func
+        self._log = func
 
-    def _easy_log(self, level, fmt, *args):
+
         if self.on_log is not None:
+        if self.log is not None:
             buf = fmt % args
             try:
                 if level == SERIAL_LOG_DEBUG:
@@ -189,8 +202,10 @@ class Ser:
             except Exception:
                 pass
 
+
+
 class Serial:
-    def __init__(self, app):
+    def __init__(self, app: flask.Flask):
         self.ser = Ser()
         if app is not None:
             self.init_app(app)
@@ -206,6 +221,7 @@ class Serial:
         # try open serial
         self.ser.loop_start()
 
+
     def on_message(self):
         """serial receive message use decorator
         use：
@@ -217,25 +233,28 @@ class Serial:
             # type: (Callable) -> Callable
             self.ser.on_message = handler
             return handler
+
         return decorator
 
-    def on_send(self, msg):
+
+    def send(self, msg):
         """serial send message
         use：
-            serial.on_send("send a message to serial")
+            serial.send("send a message to serial")
         """
-        self.ser.on_send(msg)
+        self.ser.send(msg)
 
-    def on_log(self):
+
+    def log(self):
         """logging
         use：
-            serial.on_log()
+            serial.log()
             def handle_logging(level, info)
                 print(info)
         """
         def decorator(handler):
             # type: (Callable) -> Callable
-            self.ser.on_log = handler
+            self.ser.log = handler
             return handler
-        return decorator
 
+        return decorator

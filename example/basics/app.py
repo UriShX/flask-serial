@@ -29,7 +29,7 @@ def index():
 @socketio.on('send')
 def handle_send(json_str):
     data = json.loads(json_str)
-    ser.on_send(data['message'])
+    ser.send(data['message'])
     print("send to serial: %s"%data['message'])
 
 @ser.on_message()
@@ -37,7 +37,7 @@ def handle_message(msg):
     print("receive a message:", msg)
     socketio.emit("serial_message", data={"message":str(msg)})
 
-@ser.on_log()
+@ser.log()
 def handle_logging(level, info):
     print(level, info)
 
