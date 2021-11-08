@@ -16,12 +16,22 @@ import serial
 import time
 import threading
 import collections
+import flask
 
-SERIAL_LOG_INFO = 0x01
-SERIAL_LOG_NOTICE = 0x02
-SERIAL_LOG_WARNING = 0x04
-SERIAL_LOG_ERR = 0x05
-SERIAL_LOG_DEBUG = 0x6
+from enum import IntEnum, unique
+from typing import Any
+
+
+
+@unique
+class LogLevel(IntEnum):
+    INFO = 0
+    NOTICE = 1
+    WARNING = 2
+    ERR = 3
+    DEBUG = 4
+
+
 
 class Ser:
     """serial class,use thire library: pyserial"""
@@ -29,12 +39,12 @@ class Ser:
     def __init__(self):
         # default serial args
         self.serial = serial.Serial()
-        self.serial.timeout  = 0.1
-        self.serial.port     = "COM1"
-        self.serial.baudrate = 9600
-        self.serial.bytesize = 8
-        self.serial.parity   = "N"
-        self.serial.stopbits = 1
+        # self.serial.timeout  = 0.1
+        # self.serial.port     = "COM1"
+        # self.serial.baudrate = 9600
+        # self.serial.bytesize = 8
+        # self.serial.parity   = "N"
+        # self.serial.stopbits = 1
         self.max_recv_buf_len = 255
 
         self._out_packet = collections.deque()
@@ -75,7 +85,7 @@ class Ser:
                     if not b:
                         break
                     self._handle_on_message(b)
-                    self._easy_log(SERIAL_LOG_INFO, "serial receive message:%s", b)
+                    self._easy_log(LogLevel.INFO, "serial received message: %s", b)
                 except Exception as e:
                     pass
 
@@ -88,19 +98,19 @@ class Ser:
                     self._close_serial()
                 self.serial.open()
             except serial.SerialException as e:
-                # print("[ERR] open serial error!!! %s" % e)
-                # self._easy_log(SERIAL_LOG_ERR, "open serial error!!! %s", e)
+                # print("[LogLevel.ERR] open serial error!!! %s" % e)
+                # self._easy_log(LogLevel.ERR, "open serial error!!! %s", e)
                 raise
             else:
                 self.serial_alive = True
                 self._thread = threading.Thread(target=self._recv)
                 self._thread.setDaemon(True)
                 self._thread.start()
-                # print("[INFO] open serial success: %s / %s"%(self.serial.port, self.serial.baudrate))
-                self._easy_log(SERIAL_LOG_INFO, "open serial success: %s / %s",self.serial.port, self.serial.baudrate)
+                # print("[LogLevel.INFO] open serial success: %s / %s"%(self.serial.port, self.serial.baudrate))
+                self._easy_log(LogLevel.INFO, "open serial success: %s / %s",self.serial.port, self.serial.baudrate)
         else:
-            print("[ERR] port is not setting!!!")
-            self._easy_log(SERIAL_LOG_ERR, "port is not setting!!!")
+            print("[LogLevel.ERR] port is not setting!!!")
+            self._easy_log(LogLevel.ERR, "port is not setting!!!")
 
 
     def _close_serial(self):
@@ -123,11 +133,11 @@ class Ser:
                         break
                     # s = str(binascii.b2a_hex(b).decode('utf-8')).upper()
                     self._handle_on_message(b)
-                    self._easy_log(SERIAL_LOG_INFO, "serial receive message:%s", b)
+                    self._easy_log(LogLevel.INFO, "serial receive message: %s", b)
                 except Exception as e:
                     pass
                     # self.serial_alive = False
-                    # self._easy_log(SERIAL_LOG_ERR, "serial err:%s", e)
+                    # self._easy_log(LogLevel.ERR, "serial err:%s", e)
 
 
     @property
@@ -159,7 +169,7 @@ class Ser:
                     self.serial.write(msg)
                 if isinstance(msg, str):
                     self.serial.write(msg.encode('utf-8'))
-            self._easy_log(SERIAL_LOG_INFO, "serial send message: %s", msg)
+            self._easy_log(LogLevel.INFO, "serial send message: %s", msg)
 
 
     @property
@@ -184,21 +194,11 @@ class Ser:
         self._log = func
 
 
-        if self.on_log is not None:
+    def _easy_log(self, level: LogLevel, fmt, *args):
         if self.log is not None:
             buf = fmt % args
             try:
-                if level == SERIAL_LOG_DEBUG:
-                    level = "[DEBUG]"
-                if level == SERIAL_LOG_ERR:
-                    level = "[ERR]"
-                if level == SERIAL_LOG_INFO:
-                    level = "[INFO]"
-                if level == SERIAL_LOG_NOTICE:
-                    level = "[NOTICE]"
-                if level == SERIAL_LOG_WARNING:
-                    level = "[WARNING]"
-                self.on_log(level, buf)
+                self.log(f'[{level.name}]', buf)
             except Exception:
                 pass
 
@@ -210,7 +210,8 @@ class Serial:
         if app is not None:
             self.init_app(app)
 
-    def init_app(self, app):
+
+    def init_app(self, app: flask.Flask):
         self.ser.serial.timeout  = app.config.get("SERIAL_TIMEOUT")
         self.ser.serial.port     = app.config.get("SERIAL_PORT")
         self.ser.serial.baudrate = app.config.get("SERIAL_BAUDRATE")
