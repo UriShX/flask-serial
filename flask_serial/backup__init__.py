@@ -1,15 +1,40 @@
+#!usr/bin/python
+#-*- coding: utf-8 -*-
+"""flask-serial Package.
+:author: Redfalsh <13693421942@163.com>
+:license: MIT, see license file or https://opensource.org/licenses/MIT
+:created on 2019-01-10 10:59:22
+:last modified by:   Ketchu13
+:last modified time: 2020-08-26 19:20:00
+:describe:
+        flask-serial package is used in flask website, it can receive or send serial's data,
+        you can use it to send or receive some serial's data to show website with flask-socketio
+"""
+__version__ = "1.1.0"
+
 import serial
 import time
 import threading
 import collections
 import flask
 
-from .loglevel import LogLevel
+from enum import IntEnum, unique
+from typing import Any
 
 
 
-class _Serial:
-    """serial class, use the pySerial"""
+@unique
+class LogLevel(IntEnum):
+    INFO = 0
+    NOTICE = 1
+    WARNING = 2
+    ERR = 3
+    DEBUG = 4
+
+
+
+class Ser:
+    """serial class,use thire library: pyserial"""
 
     def __init__(self):
         # default serial args
@@ -135,11 +160,15 @@ class _Serial:
         self.on_message(message)
 
 
-    def send(self, msg: bytes):
+    def send(self, msg):
         """send msg,
         msg: type of bytes or str"""
         with self._callback_mutex:
-            self.serial.write(msg + b'\n')
+            if msg:
+                if isinstance(msg, bytes):
+                    self.serial.write(msg)
+                if isinstance(msg, str):
+                    self.serial.write(msg.encode('utf-8'))
             self._easy_log(LogLevel.INFO, "serial send message: %s", msg)
 
 
@@ -172,3 +201,61 @@ class _Serial:
                 self.log(f'[{level.name}]', buf)
             except Exception:
                 pass
+
+
+
+class Serial:
+    def __init__(self, app: flask.Flask):
+        self.ser = Ser()
+        if app is not None:
+            self.init_app(app)
+
+
+    def init_app(self, app: flask.Flask):
+        self.ser.serial.timeout  = app.config.get("SERIAL_TIMEOUT")
+        self.ser.serial.port     = app.config.get("SERIAL_PORT")
+        self.ser.serial.baudrate = app.config.get("SERIAL_BAUDRATE")
+        self.ser.serial.bytesize = app.config.get("SERIAL_BYTESIZE")
+        self.ser.serial.parity   = app.config.get("SERIAL_PARITY")
+        self.ser.serial.stopbits = app.config.get("SERIAL_STOPBITS")
+
+        # try open serial
+        self.ser.loop_start()
+
+
+    def on_message(self):
+        """serial receive message use decorator
+        use：
+            @serial.on_message()
+            def handle_message(msg):
+                print("serial receive message：", msg)
+        """
+        def decorator(handler):
+            # type: (Callable) -> Callable
+            self.ser.on_message = handler
+            return handler
+
+        return decorator
+
+
+    def send(self, msg):
+        """serial send message
+        use：
+            serial.send("send a message to serial")
+        """
+        self.ser.send(msg)
+
+
+    def log(self):
+        """logging
+        use：
+            serial.log()
+            def handle_logging(level, info)
+                print(info)
+        """
+        def decorator(handler):
+            # type: (Callable) -> Callable
+            self.ser.log = handler
+            return handler
+
+        return decorator
