@@ -51,6 +51,7 @@ class Ser:
         # serial receive threading
         self._thread = None
         self._thread_terminate = False
+        self._recv_thread = None
         self.serial_alive = False
 
         self._on_message = None
@@ -63,8 +64,7 @@ class Ser:
 
 
     def loop_start(self):
-        self._thread = threading.Thread(target=self.loop_forever)
-        self._thread.setDaemon(True)
+        self._thread = threading.Thread(target=self.loop_forever, daemon=True)
         self._thread.start()
 
 
@@ -93,21 +93,13 @@ class Ser:
     def _open_serial(self):
         """try to open the serial"""
         if self.serial.port and self.serial.baudrate:
-            try:
-                if self.serial.isOpen():
-                    self._close_serial()
-                self.serial.open()
-            except serial.SerialException as e:
-                # print("[LogLevel.ERR] open serial error!!! %s" % e)
-                # self._easy_log(LogLevel.ERR, "open serial error!!! %s", e)
-                raise
-            else:
-                self.serial_alive = True
-                self._thread = threading.Thread(target=self._recv)
-                self._thread.setDaemon(True)
-                self._thread.start()
-                # print("[LogLevel.INFO] open serial success: %s / %s"%(self.serial.port, self.serial.baudrate))
-                self._easy_log(LogLevel.INFO, "open serial success: %s / %s",self.serial.port, self.serial.baudrate)
+            print(id(self))
+            self.serial_alive = True
+            self._thread_terminate = False
+            self._thread = threading.Thread(target=self._recv, daemon=True)
+            self._thread.start()
+            # print("[LogLevel.INFO] open serial success: %s / %s"%(self.serial.port, self.serial.baudrate))
+            self._easy_log(LogLevel.INFO, "open serial success: %s / %s",self.serial.port, self.serial.baudrate)
         else:
             print("[LogLevel.ERR] port is not setting!!!")
             self._easy_log(LogLevel.ERR, "port is not setting!!!")
@@ -117,7 +109,7 @@ class Ser:
         try:
             self.serial.close()
             self.serial_alive = False
-            self._thread_terminate = False
+            self._thread_terminate = True
         except:
             pass
 
@@ -218,6 +210,7 @@ class Serial:
         self.ser.serial.bytesize = app.config.get("SERIAL_BYTESIZE")
         self.ser.serial.parity   = app.config.get("SERIAL_PARITY")
         self.ser.serial.stopbits = app.config.get("SERIAL_STOPBITS")
+        self.ser.serial.open()
 
         # try open serial
         self.ser.loop_start()

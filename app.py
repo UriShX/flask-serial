@@ -1,8 +1,7 @@
 #!usr/bin/python
 #-*- coding: utf-8 -*-
-from dataclasses import  asdict
 from flask import Flask, render_template
-from flask_serial import Serial, PortSettings
+from flask_serial import ThreadedSerial
 from flask_socketio import SocketIO
 from flask_bootstrap import Bootstrap
 
@@ -15,21 +14,16 @@ eventlet.monkey_patch()
 
 app = Flask(__name__)
 
-port = PortSettings(
-    port     = 'COM5',
-    timeout  = 0.1,
-    baudrate = 9600,
-    bytesize = 8,
-    parity   = 'N',
-    stopbits = 1
-)
+app.config['SERIAL_TIMEOUT']  = 0.1
+app.config['SERIAL_PORT']     = 'COM5'
+app.config['SERIAL_BAUDRATE'] = 9600
+app.config['SERIAL_BYTESIZE'] = 8
+app.config['SERIAL_PARITY']   = 'N'
+app.config['SERIAL_STOPBITS'] = 1
 
-app.config.from_mapping(**port.to_config_dict())
-
-
-ser = Serial()
-socketio = SocketIO()
-bootstrap = Bootstrap()
+ser = ThreadedSerial(app)
+socketio = SocketIO(app)
+bootstrap = Bootstrap(app)
 
 
 @app.route('/')
@@ -40,18 +34,19 @@ def index():
 @socketio.on('send')
 def handle_send(json_str):
     data = json.loads(json_str)
-    ser.send(data['message'])
-    print("app: Sent message: %s"%data['message'])
+    ser.write(data['message'])
+    print("send to serial: %s"%data['message'])
 
 
-@ser.on_message()
+@ser.on_message
 def handle_message(msg):
-    print("app: Received message:", msg)
+    print("handle_message():", msg)
+    ser.write(f'reply: {msg[:-1]}')
     socketio.emit("serial_message", data={"message":str(msg)})
 
-@ser.log()
-def handle_logging(level, info):
-    print(level, info)
+# @ser.log()
+# def handle_logging(level, info):
+#     print(level, info)
 
 
 
@@ -59,7 +54,5 @@ if __name__ == '__main__':
     # Warning!!!
     # this must use `debug=False`
     # if you use `debug=True`,it will open serial twice, it will open serial failed!!!
-    ser.init_app(app)
-    socketio.init_app(app)
-    bootstrap.init_app(app)
+    ser.open()
     socketio.run(app, debug=False)

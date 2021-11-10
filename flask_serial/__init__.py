@@ -12,4 +12,4 @@
 """
 __version__ = "1.1.0"
 
-from .serial import Serial, PortSettings
+from .serial import Serial, PortSettings, ThreadedSerial
