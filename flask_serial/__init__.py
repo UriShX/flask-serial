@@ -12,6 +12,7 @@
 """
 __version__ = "1.1.0"
 
+import os
 import serial
 import time
 import threading
@@ -75,7 +76,11 @@ class Ser:
                 break
             else:
                 with self._open_mutex:
-                    self._open_serial()
+                    print('------------------------------------------------------------')
+                    print(self.serial.port)
+                    if os.environ.get(self.serial.port) is None:
+                        os.environ[self.serial.port] = self.serial.port
+                        self._open_serial()
             time.sleep(1)
         while self.serial_alive:
             time.sleep(0.1)
@@ -124,18 +129,19 @@ class Ser:
 
     def _recv(self):
         """serial recv thread"""
-        while self.serial_alive:
-            time.sleep(0.1)
-            while self.serial_alive:
-                try:
-                    b = self.serial.read(self.max_recv_buf_len)
-                    if not b:
-                        break
-                    # s = str(binascii.b2a_hex(b).decode('utf-8')).upper()
-                    self._handle_on_message(b)
-                    self._easy_log(LogLevel.INFO, "serial receive message: %s", b)
-                except Exception as e:
-                    pass
+        pass
+        # while self.serial_alive:
+        #     time.sleep(0.1)
+        #     while self.serial_alive:
+        #         try:
+        #             b = self.serial.read(self.max_recv_buf_len)
+        #             if not b:
+        #                 break
+        #             # s = str(binascii.b2a_hex(b).decode('utf-8')).upper()
+        #             self._handle_on_message(b)
+        #             self._easy_log(LogLevel.INFO, "serial receive message: %s", b)
+        #         except Exception as e:
+        #             pass
                     # self.serial_alive = False
                     # self._easy_log(LogLevel.ERR, "serial err:%s", e)
 

@@ -12,8 +12,8 @@ eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SERIAL_TIMEOUT'] = 0.1
-app.config['SERIAL_PORT'] = 'COM1'
-app.config['SERIAL_BAUDRATE'] = 115200
+app.config['SERIAL_PORT'] = 'COM5'
+app.config['SERIAL_BAUDRATE'] = 9600
 app.config['SERIAL_BYTESIZE'] = 8
 app.config['SERIAL_PARITY'] = 'N'
 app.config['SERIAL_STOPBITS'] = 1
@@ -37,12 +37,12 @@ def handle_message(msg):
     print("receive a message:", msg)
     socketio.emit("serial_message", data={"message":str(msg)})
 
-@ser.log()
-def handle_logging(level, info):
-    print(level, info)
+# @ser.log()
+# def handle_logging(level, info):
+#     print(level, info)
 
 if __name__ == '__main__':
     # Warning!!!
     # this must use `debug=False`
     # if you use `debug=True`,it will open serial twice, it will open serial failed!!!
-    socketio.run(app, debug=False)
+    socketio.run(app, debug=True)
