@@ -59,6 +59,7 @@ def thread_listener(q: mp.Queue):
             print(line.decode())
             socketio.emit("serial_message", data={"message":str(line)})
 
+
 if __name__ == '__main__':
     queue = mp.Queue()
 
