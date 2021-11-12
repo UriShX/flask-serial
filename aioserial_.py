@@ -1,3 +1,5 @@
+import os
+
 import asyncio
 
 import aioserial
@@ -35,6 +37,17 @@ def async_port(q: mp.Queue, settings: PortSettings):
 
 
 def thread_port(q: mp.Queue, settings: PortSettings):
+    ps = ProcessSerial(settings)
+    ps.connect()
+
+    while True:
+        line = ps.serial.readline()
+        q.put(line)
+
+
+import time
+
+def green_port(q: mp.Queue, settings: PortSettings):
     ps = ProcessSerial(settings)
     ps.connect()
 
