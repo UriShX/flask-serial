@@ -1,14 +1,14 @@
 #!usr/bin/python
 #-*- coding: utf-8 -*-
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template
 from flask_serial import Serial
 from flask_socketio import SocketIO
 from flask_bootstrap import Bootstrap
 
 import json
-
-import eventlet
-eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SERIAL_TIMEOUT'] = 0.1

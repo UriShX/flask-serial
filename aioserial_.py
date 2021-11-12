@@ -2,45 +2,42 @@ import asyncio
 
 import aioserial
 
-from flask import Flask, render_template
+import multiprocessing as mp
+
 from flask_serial import PortSettings
-from flask_socketio import SocketIO
-from flask_bootstrap import Bootstrap
+
+import serial
+
+class ProcessSerial(object):
+
+    def __init__(self, settings: PortSettings):
+        self.settings = settings
+        self.serial = serial.Serial()
+
+    def connect(self):
+        self.serial.port     = self.settings.port
+        self.serial.timeout  = self.settings.timeout
+        self.serial.baudrate = self.settings.baudrate
+        self.serial.bytesize = self.settings.bytesize
+        self.serial.parity   = self.settings.parity
+        self.serial.stopbits = self.settings.stopbits
+        self.serial.open()
 
 
-from gevent import monkey
-monkey.patch_all()
-
-
-app = Flask(__name__)
-
-port = PortSettings(
-    port     = 'COM5',
-    timeout  = 0.1,
-    baudrate = 9600,
-    bytesize = 8,
-    parity   = 'N',
-    stopbits = 1
-)
-
-app.config.from_mapping(**port.to_config_dict())
-
-
-socketio = SocketIO(app, async_mode="gevent")
-bootstrap = Bootstrap()
-
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-async def read_and_print(aioserial_instance: aioserial.AioSerial):
+async def read_and_forward(q: mp.Queue, aioserial_instance: aioserial.AioSerial):
     while True:
-        print((await aioserial_instance.read_async()).decode(errors='ignore'), end='', flush=True)
-
-asyncio.run(read_and_print(aioserial.AioSerial(port='COM5')))
+        q.put((await aioserial_instance.read_async()).decode(errors='ignore'))
 
 
-bootstrap.init_app(app)
-socketio.run(debug=True)
+def async_port(q: mp.Queue, settings: PortSettings):
+    serial = aioserial.AioSerial(port=settings.port, baudrate=settings.baudrate)
+    asyncio.run(read_and_forward(q, serial))
+
+
+def thread_port(q: mp.Queue, settings: PortSettings):
+    ps = ProcessSerial(settings)
+    ps.connect()
+
+    while True:
+        line = ps.serial.readline()
+        q.put(line)

@@ -21,6 +21,44 @@ import flask
 
 from enum import IntEnum, unique
 from typing import Any
+from dataclasses import dataclass
+
+
+
+@dataclass
+class PortSettings:
+    port: str
+    baudrate: int
+    timeout: float
+    bytesize: int
+    parity: str
+    stopbits: int
+
+
+    def to_config_dict(self):
+        return {
+            "SERIAL_PORT"     : self.port,
+            "SERIAL_BAUDRATE" : self.baudrate,
+            "SERIAL_TIMEOUT"  : self.timeout,
+            "SERIAL_BYTESIZE" : self.bytesize,
+            "SERIAL_PARITY"   : self.parity,
+            "SERIAL_STOPBITS" : self.stopbits,
+        }
+
+
+    @classmethod
+    def from_config_dict(cls, config: dict):
+        settings: PortSettings = cls(
+            port     = config.get("SERIAL_PORT"),
+            baudrate = config.get("SERIAL_BAUDRATE", 9600),
+            timeout  = config.get("SERIAL_TIMEOUT",  0.1),
+            bytesize = config.get("SERIAL_BYTESIZE", 8),
+            parity   = config.get("SERIAL_PARITY",  "N"),
+            stopbits = config.get("SERIAL_STOPBITS", 1),
+        )
+        if settings.port is None:
+            raise IOError("Serial port name is not configured!")
+        return settings
 
 
 

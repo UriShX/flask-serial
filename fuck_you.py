@@ -2,18 +2,18 @@
 # monkey.patch_all()
 
 
-import multiprocessing as mp
 import threading
 import time
+import multiprocessing as mp
 
 from serial import Serial
 
 from aioserial_ import async_port
 
-# from flask import Flask, render_template
+from flask import Flask, render_template
 from flask_serial import PortSettings
-# from flask_socketio import SocketIO
-# from flask_bootstrap import Bootstrap
+from flask_socketio import SocketIO
+from flask_bootstrap import Bootstrap
 
 
 
@@ -26,18 +26,18 @@ port = PortSettings(
     stopbits = 1
 )
 
-# app = Flask(__name__)
+app = Flask(__name__)
 
-# app.config.from_mapping(**port.to_config_dict())
-
-
-# socketio = SocketIO(app)
-# bootstrap = Bootstrap(app)
+app.config.from_mapping(**port.to_config_dict())
 
 
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
+socketio = SocketIO(app, async_mode='threading')
+bootstrap = Bootstrap(app)
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 class ProcessSerial(object):
 
@@ -57,14 +57,17 @@ class ProcessSerial(object):
 
 def listener(q: mp.Queue):
     line = bytearray()
+
+    time.sleep(0.1)
+
     while True:
-        byte: str = queue.get()
-        if byte != '\n':
-            line.extend(byte.encode())
-        else:
+        byte: str = q.get()
+        line.extend(byte.encode())
+        print(byte, end='')
+        if byte == '\n':
             print(line.decode())
             line.clear()
-            # socketio.emit("serial_message", data={"message":str(line)})
+        # socketio.emit("serial_message", data={"message":str(line)})
 
 if __name__ == '__main__':
     queue = mp.Queue()
@@ -76,18 +79,9 @@ if __name__ == '__main__':
     t.start()
 
     # queue.put(port)
+    socketio.run(app, debug=False)
 
-    counter = 0
-    while True:
-        print('-->', counter)
-        counter += 1
-        time.sleep(1)
-
-#     socketio.run(app, debug=False)
-
-#     queue.put(port)
-
-#     # Wait for the worker to finish
-#     queue.close()
-#     queue.join_thread()
-#     p.join()
+    # # Wait for the worker to finish
+    queue.close()
+    queue.join_thread()
+    p.join()
