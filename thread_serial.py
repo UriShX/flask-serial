@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import psutil
 import multiprocessing as mp
 
 from serial import Serial
@@ -66,17 +67,22 @@ if __name__ == '__main__':
     portvar = f'LABO_SERIAL_PORT_' + port.port
     portenv = os.environ.get(portvar)
     print(portenv)
-    if os.environ.get(portvar) is None:
-        os.environ[portvar] = portvar
-        p = mp.Process(target=thread_port, args=(queue, port,))
-        p.start()
+    if portenv is not None:
+        p = psutil.Process(int(portenv))
+        p.terminate()
+        os.environ.pop(portvar)
+
+    p = mp.Process(target=thread_port, args=(queue, port,))
+    p.start()
+    os.environ[portvar] = str(p.pid)
+
     portenv = os.environ.get(portvar)
     print(portenv)
 
     t = threading.Thread(target=thread_listener, args=(queue,), daemon=True)
     t.start()
 
-    socketio.run(app, debug=False)
+    socketio.run(app, debug=True)
 
     # Wait for the worker to finish
     queue.close()
