@@ -36,7 +36,7 @@ class LogLevel(IntEnum):
 class Ser:
     """serial class,use thire library: pyserial"""
 
-    def __init__(self):
+    def __init__(self , p_timer=0.05):
         # default serial args
         self.serial = serial.Serial()
         # self.serial.timeout  = 0.1
@@ -52,6 +52,8 @@ class Ser:
         self._thread = None
         self._thread_terminate = False
         self.serial_alive = False
+
+        self.polling_timer = p_timer # Original was 0.1, too slow
 
         self._on_message = None
         self._on_send = None
@@ -78,7 +80,7 @@ class Ser:
                     self._open_serial()
             time.sleep(1)
         while self.serial_alive:
-            time.sleep(0.1)
+            time.sleep(self.polling_timer)
             while run:
                 try:
                     b = self.serial.read(self.max_recv_buf_len)
